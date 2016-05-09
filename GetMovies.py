@@ -7,6 +7,7 @@ import pickle
 import argparse
 import json
 import threading
+import sys
 
 # class crawlingThread (threading.Thread):
 #     def __init__(self, url, movies_data):
@@ -111,8 +112,9 @@ def search_movie(movie_name, movies):
     movie_list = list(movies.keys())
     movies_found = [movie for movie in movie_list if movie_name.lower() in movie.lower()]
 
-    for movie in movies_found:
-        print('Found:{0} - {1}'.format(movie, movies[movie]))
+    return movies_found
+    #for movie in movies_found:
+        #print('Found:{0} - {1}'.format(movie, movies[movie]))
 
 
 if __name__ == '__main__':
@@ -127,6 +129,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Happy Movie Watching!')
     parser.add_argument('-m',  help='provide movie name')
+    parser.add_argument('-u',  help='update movies')
     parser.add_argument('--resolution',  help='provide movie resolution')
 
     args = parser.parse_args()
@@ -145,7 +148,10 @@ if __name__ == '__main__':
 
     if movie_name:
         print('Searching for {0}...'.format(movie_name))
-        search_movie(movie_name, movies)
+        found_movies = search_movie(movie_name, movies)
+        for count, movie in enumerate(found_movies):
+            print('{0} - {1} ### {2}'.format(count +1 , movie, movies[movie]))
+        sys.exit()
 
     movies_data = []
     #crawling_threads = []
@@ -153,12 +159,13 @@ if __name__ == '__main__':
         url = 'https://yifymovie.re/search/0/{0}/All/0/latest/60/page/{1}/'.format(movie_resolution, page)
 
         # Get the list of tuples (movie name, url which contains link to torrent file)
-        print("Crawling ", url)
+
         #threads_id = crawlingThread(url, movies_data)
         #threads_id.start()
         #threads_id.join()
         #crawling_threads.append(threads_id)
         movies_per_page = get_movie_list(url)
+        print('Crawling {0} - {1} movies'.format(url, len(movies_per_page)))
         if not movies_per_page:
             print("Crawling is done.")
             break
