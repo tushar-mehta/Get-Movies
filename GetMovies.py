@@ -8,6 +8,7 @@ import argparse
 import json
 
 
+# Returns all movies and it's page url
 def get_movie_list(url):
     cont = requests.get(url)
 
@@ -22,6 +23,7 @@ def get_movie_list(url):
         return movies_data
 
 
+# Returns all movies and it's torrent url
 def get_movie_torrent_url(url):
     #print(url)
     cont = requests.get(url)
@@ -33,6 +35,7 @@ def get_movie_torrent_url(url):
         return torrent_urls[0]['href']
 
 
+# Saves torrent file of from given url
 def get_movie_torrent(url):
     torrent_file = url.rsplit('/', 1)[1]
     print("downloading ", url)
@@ -50,33 +53,40 @@ def get_movie_torrent(url):
 
 
 def search_movie(movie_name, movies):
+    # Look for exact movie name match
     if movie_name in movies:
         print('Movie Name:{0}'.format(movie_name))
         print('Movie Torrent:{0}'.format(movies[movie_name]))
-    #elif:
-        #movie_names = list(movies.keys())
+        return
 
+    # Look for movie name as a keyword in list of movies (keys)
+    movie_list = list(movies.keys())
+    movies_found = [movie for movie in movie_list if movie_name.lower() in movie.lower()]
+
+    for movie in movies_found:
+        print('Found:{0} - {1}'.format(movie, movies[movie]))
 
 
 if __name__ == '__main__':
 
     movie_resolution = '1080p'
-    pages = 100
-    # Global dictionary which contains movies names (keys) and it's torrent file urls (values)
+    pages = 2
+    # movies read from movies.json
     movies = {}
+
     movie_name = ''
 
-    # parser = argparse.ArgumentParser(description='Happy Movie Watching!')
-    # parser.add_argument('-m',  help='provide movie name')
-    # parser.add_argument('--resolution',  help='provide movie resolution')
+    parser = argparse.ArgumentParser(description='Happy Movie Watching!')
+    parser.add_argument('-m',  help='provide movie name')
+    parser.add_argument('--resolution',  help='provide movie resolution')
 
-    # args = parser.parse_args()
+    args = parser.parse_args()
 
-    # if args.m:
-    #   movie_name = args.m
+    if args.m:
+      movie_name = args.m
 
-    # if args.resolution:
-    #   movie_resolution = args.resolution
+    if args.resolution:
+      movie_resolution = args.resolution
 
     try:
         with open('movies.json', 'r') as f:
@@ -85,6 +95,7 @@ if __name__ == '__main__':
         print("warning: 'movies.json' not found")
 
     if movie_name:
+        print('Searching for {0}...'.format(movie_name))
         search_movie(movie_name, movies)
 
     movies_data = []
@@ -109,12 +120,14 @@ if __name__ == '__main__':
             print("Retrieving torrent url {0}/{1} - {2}...".format(count+1, data_len, movie[0]))
             movies[movie[0]] = get_movie_torrent_url(movie[1]);
 
-    try:
-        print("Saving data to movies.json...")
-        with open('movies.json', 'w') as f:
-            json.dump(movies, f)
-    except IOError as e:
-        print("warning:failed to dump 'movies.json'")
+    # we found new movies from website
+    if movies:
+        try:
+            print("Saving data to movies.json...")
+            with open('movies.json', 'w') as f:
+                json.dump(movies, f)
+        except IOError as e:
+            print("warning:failed to dump 'movies.json'")
 
         #import pdb
         #pdb.set_trace()
