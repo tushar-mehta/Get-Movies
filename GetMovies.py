@@ -6,6 +6,66 @@ import subprocess
 import pickle
 import argparse
 import json
+import threading
+
+# class crawlingThread (threading.Thread):
+#     def __init__(self, url, movies_data):
+#         threading.Thread.__init__(self)
+#         self.url = url
+#         self.movies_data = movies_data
+#         #self.counter = counter
+#     def run(self):
+#         print("Starting ", url)
+#         # Acquire lock to synchronize thread
+#         #threadLock.acquire()
+#         update_movie_list(self.url, self.movies_data)
+#         # Release lock for the next thread
+#         #threadLock.release()
+#         #print "Exiting " + self.name
+
+
+# # Returns all movies and it's page url
+# def update_movie_list(url, movies_data):
+#     cont = requests.get(url)
+
+#     if cont.status_code == 200:
+#         soup = BeautifulSoup(cont.content, 'html.parser')
+#         movielinks = soup.find_all("a", class_="movielink")
+
+#         import pdb
+#         pdb.set_trace()
+
+#         for movie in movielinks:
+#             movies_data.append((movie.string, movie['href']))
+
+#         print('nice')
+
+
+class myThread (threading.Thread):
+    def __init__(self, movie, movies):
+        threading.Thread.__init__(self)
+        self.movie = movie
+        self.movies = movies
+        #self.counter = counter
+    def run(self):
+        #print("Starting ", self.movie)
+        # Acquire lock to synchronize thread
+        #threadLock.acquire()
+        update_movies_torrent_url(self.movie, self.movies)
+        # Release lock for the next thread
+        #threadLock.release()
+        #print "Exiting " + self.name
+
+
+# Returns all movies and it's torrent url
+def update_movies_torrent_url(movie, movies):
+    #print(url)
+    cont = requests.get(movie[1])
+
+    if cont.status_code == 200:
+        soup = BeautifulSoup(cont.content, 'html.parser')
+        torrent_urls = soup.find_all('a', id="dt")
+        movies[movie[0]] = torrent_urls[0]['href']
 
 
 # Returns all movies and it's page url
@@ -21,18 +81,6 @@ def get_movie_list(url):
             movies_data.append((movie.string, movie['href']))
 
         return movies_data
-
-
-# Returns all movies and it's torrent url
-def get_movie_torrent_url(url):
-    #print(url)
-    cont = requests.get(url)
-
-    if cont.status_code == 200:
-        soup = BeautifulSoup(cont.content, 'html.parser')
-
-        torrent_urls = soup.find_all('a', id="dt")
-        return torrent_urls[0]['href']
 
 
 # Saves torrent file of from given url
@@ -70,9 +118,10 @@ def search_movie(movie_name, movies):
 if __name__ == '__main__':
 
     movie_resolution = '1080p'
-    pages = 2
+    pages = 200
     # movies read from movies.json
     movies = {}
+    #threadLock = threading.Lock()
 
     movie_name = ''
 
@@ -99,14 +148,17 @@ if __name__ == '__main__':
         search_movie(movie_name, movies)
 
     movies_data = []
+    #crawling_threads = []
     for page in list(range(1, pages+1)):
         url = 'https://yifymovie.re/search/0/{0}/All/0/latest/60/page/{1}/'.format(movie_resolution, page)
 
         # Get the list of tuples (movie name, url which contains link to torrent file)
         print("Crawling ", url)
-
+        #threads_id = crawlingThread(url, movies_data)
+        #threads_id.start()
+        #threads_id.join()
+        #crawling_threads.append(threads_id)
         movies_per_page = get_movie_list(url)
-
         if not movies_per_page:
             print("Crawling is done.")
             break
@@ -114,16 +166,25 @@ if __name__ == '__main__':
         movies_data += movies_per_page;
         #print(movies_data)
 
+    #for thread in crawling_threads:
+        #thread.join()
+
     data_len = len(movies_data)
+    threads = []
     for count, movie in enumerate(movies_data):
         if movie[0] not in movies:
             print("Retrieving torrent url {0}/{1} - {2}...".format(count+1, data_len, movie[0]))
-            movies[movie[0]] = get_movie_torrent_url(movie[1]);
+            threads_id = myThread(movie, movies)
+            threads_id.start()
+            threads.append(threads_id)
+
+    for thread in threads:
+        thread.join()
 
     # we found new movies from website
     if movies:
         try:
-            print("Saving data to movies.json...")
+            print("Saving {0} movies in movies.json...".format(len(movies)))
             with open('movies.json', 'w') as f:
                 json.dump(movies, f)
         except IOError as e:
